@@ -9,9 +9,8 @@ CORS(app)
 
 llm = Llama(
         model_path="ggml-model-f32.gguf",
-        n_gpu_layers=-1, # Uncomment to use GPU acceleration
-        n_ctx=2048, # Uncomment to increase the context window
-        # seed=1337, # Uncomment to set a specific seed
+        n_gpu_layers=-1,
+        n_ctx=2048, 
     )
 
 @app.route('/')

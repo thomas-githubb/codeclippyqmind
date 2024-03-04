@@ -13,8 +13,9 @@ from transformers import (
 from huggingface_hub import login 
 from peft import LoraConfig, PeftModel
 from trl import SFTTrainer
+import os
+
 # NOTE: SETTING UP MODEL AND TRAINING
-# The model that you want to train from the Hugging Face hub
 model_name = "NousResearch/Llama-2-7b-chat-hf"
 
 # The instruction dataset to use
@@ -23,7 +24,6 @@ dataset_name = "mlabonne/guanaco-llama2-1k"
 # Fine-tuned model name
 new_model = "llama-2-7b-miniguanaco"
 
-# Load and concatenate datasets
 # NOTE: edit dataset code
 loaded_dataset_1 = load_dataset(path="semeru/code-code-CodeCompletion-TokenLevel-Python", split="train")
 
@@ -45,7 +45,7 @@ dataset_python_2 = loaded_dataset_2.map(new_prompt_2)
 
 dataset = concatenate_datasets([dataset_python_1])
 
-fraction_of_data = 0.001 # Adjust to the desired fraction (e.g., 0.1 for 10%)
+fraction_of_data = 0.001 
 dataset = dataset.select(range(int(len(dataset) * fraction_of_data)))
 
 # Define QLoRA and bitsandbytes parameters
@@ -82,8 +82,6 @@ max_seq_length = None
 packing = False
 device_map = {"": 0}
 
-# Load and concatenate datasets
-#dataset = concatenate_datasets([dataset_python])
 
 # Load tokenizer and model with QLoRA configuration
 compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
@@ -98,8 +96,8 @@ if compute_dtype == torch.float16 and use_4bit:
         print("=" * 80)
 
 # Adjust per_device_train_batch_size and gradient_accumulation_steps
-per_device_train_batch_size = 1  # Adjust to a smaller value
-gradient_accumulation_steps = 4  # Adjust to a suitable value
+per_device_train_batch_size = 1  
+gradient_accumulation_steps = 4  
 
 # Set training parameters
 training_arguments = TrainingArguments(
@@ -112,7 +110,7 @@ training_arguments = TrainingArguments(
     max_steps=max_steps, warmup_ratio=warmup_ratio, group_by_length=group_by_length, lr_scheduler_type=lr_scheduler_type,
     report_to="tensorboard",
     fp16=fp16, bf16=bf16, 
-    # optim=optim,
+    
 )
 
 # Load base model
@@ -136,6 +134,7 @@ trainer = SFTTrainer(
 )
 
 torch.mps.empty_cache()
+
 # Train model
 trainer.train()
 
@@ -143,7 +142,10 @@ trainer.train()
 trainer.model.save_pretrained(new_model)
 
 
-login(token="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")
+
+token = os.environ.get('token')
+
+login(token=token)
 
 trainer.model.push_to_hub(new_model, use_temp_dir=False)
 tokenizer.push_to_hub(new_model, use_temp_dir=False)
@@ -157,12 +159,10 @@ config = PeftConfig.from_pretrained("mthw/llama-2-7b-miniguanaco")
 model = AutoModelForCausalLM.from_pretrained("NousResearch/Llama-2-7b-chat-hf")
 model = PeftModel.from_pretrained(model, "mthw/llama-2-7b-miniguanaco")
 tokenizer = AutoTokenizer.from_pretrained("NousResearch/Llama-2-7b-chat-hf", trust_remote_code=True)
-# tokenizer.pad_token = tokenizer.eos_token
-# tokenizer.padding_side = "right"
 model = model.merge_and_unload()
 
 
-login(token="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")
+login(token=token)
 model.push_to_hub("llama-2-7b-miniguanaco", use_temp_dir=False)
 tokenizer.push_to_hub("llama-2-7b-miniguanaco", use_temp_dir=False)
 
